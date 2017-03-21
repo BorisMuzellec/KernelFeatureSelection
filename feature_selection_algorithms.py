@@ -20,7 +20,7 @@ def incremental_selection(X, Y, k, method = 'copula', kernel = sk.rbf_kernel):
       Z = approx_copula(X_)
       
       for i in range(k):
-            best_score = -np.inf
+            best_score = -1E3
             best_feature = -1
             if i > 0:
                   for j in list(set(np.arange(m)) - set(S)):
@@ -29,13 +29,13 @@ def incremental_selection(X, Y, k, method = 'copula', kernel = sk.rbf_kernel):
                               score += independence_measure(Z[:, (j,s)], kernel)
                         score = independence_measure(Z[:, (j,-1)], kernel) - score/i
                         if score > best_score:
-                              score = best_score
+                              best_score = score
                               best_feature = j
             else:
                   for j in range(m):
                         score = independence_measure(Z[:, (j,-1)], kernel)
                         if score > best_score:
-                              score = best_score
+                              best_score = score
                               best_feature = j
                               
             S.append(best_feature)
@@ -46,4 +46,4 @@ iris = load_iris()
 X = iris.data
 y = iris.target
 
-print(incremental_selection(X,y,2))
+print(incremental_selection(X,y,3))
