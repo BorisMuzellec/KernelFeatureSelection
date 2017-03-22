@@ -23,24 +23,25 @@ def independence_measure(Z, kernel=sk.rbf_kernel):
     output:
           kernel copula independence measure of X (where Z = copula(X))
     """
-
     m = Z.shape[0]
-    U = np.random.uniform(size=Z.shape)
+    n = 5 * m
+    U = np.random.uniform(size=(n, Z.shape[1]))
 
-    I = kernel(Z, Z) + kernel(U, U) - kernel(Z, U) - kernel(U, Z)
-    np.fill_diagonal(I, 0)
+    I = kernel(Z, Z).mean() + kernel(U, U).mean() - 2 * kernel(Z, U).mean() 
 
-    return np.sqrt(I.sum() / (m * (m - 1)))
+    return np.sqrt(I)
 
 
 def mRMR(X, Y, S, kernel=sk.rbf_kernel):
     """
-    Max Relevance - min redundancy kernel copula independence measure
-    X: feature dataset
-    Y: labels:
-    S: index of features to test
+    Max Relevance - Min Redundancy kernel copula independence measure
+    input:
+        X: feature dataset
+        Y: labels
+        S: index of features to test
+    output:
+        Max-Relevance Min-Redundancy measure of the sample
     """
-
     n = len(S)
 
     X_ = np.c_[X, Y]

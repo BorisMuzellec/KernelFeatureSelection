@@ -13,7 +13,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn import svm
 from sklearn import ensemble
 
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from copula_dependence import *
 
@@ -25,17 +25,17 @@ def incremental_selection(X, Y, k, method='copula', kernel=sk.rbf_kernel):
     Returns all the subsets of features of length smaller than k selected by incremental search
     """
     S = []
-    Sets = []
+    subsets = []
     m = X.shape[1]
 
     X_ = np.c_[X, Y]
     Z = approx_copula(X_)
 
-    for i in range(k):
+    for i in trange(k, leave=False):
         best_score = -1E3
         best_feature = -1
         if i > 0:
-            for j in list(set(np.arange(m)) - set(S)):
+            for j in tqdm(set(np.arange(m)) - set(S), leave=False):
                 score = 0
                 for s in S:
                     score += independence_measure(Z[:, (j, s)], kernel)
@@ -51,12 +51,12 @@ def incremental_selection(X, Y, k, method='copula', kernel=sk.rbf_kernel):
                     best_feature = j
 
         S.append(best_feature)
-        Sets.append(copy.deepcopy(S))
+        subsets.append(copy.deepcopy(S))
 
-    return Sets
+    return subsets
 
 
-def selection_heuristic(X, Y, k, classifier, method='copula', kernel=sk.rbf_kernel, cv=5, loss=True):
+def selection_heuristic(X, Y, k, classifier, method='copula', kernel=sk.rbf_kernel, cv=10, loss=True):
     """
     The selection heuristic from Peng and al.
     - use incremental selection to find n sequential feature sets (n large)
@@ -65,35 +65,40 @@ def selection_heuristic(X, Y, k, classifier, method='copula', kernel=sk.rbf_kern
     """
 
     print("Performing incremental selection")
-    S = incremental_selection(X, Y, k, method=method, kernel=kernel)
+    subsets = incremental_selection(X, Y, k, method=method, kernel=kernel)
     # Store the 95% confidence interval of the cv_score as [lower_bound,
     # upper_bound]
-    cv_scores = {}
+    cv_scores = np.zeros((k, 2))
 
     print("Computing CV scores")
-    for i in tqdm(range(k)):
-        scores = cross_val_score(classifier, X[:, S[i]], y, cv=5)
-        cv_scores[i] = (scores.mean() - 2 * scores.std(), scores.mean() + 2 * scores.std()
-                        ) if not loss else (-scores.mean() - 2 * scores.std(), -scores.mean() + 2 * scores.std())
+    for i in trange(k, leave=False):
+        scores = cross_val_score(classifier, X[:, subsets[i]], y, cv=cv)
+        # epsilon = 1 if loss else -1
+        # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
+        cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
-    print("Find best score, and undistinguishable scores")
-    # find the highest upper confidence interval bound, then its lower bound,
-    # and all the intervals with upper bound higher than this lower bound
-    score_intervals = cv_scores.items()
-    #[a for(a,s) in sorted(initial_ranking, key=operator.itemgetter(1), reverse=True)][:10]
-    upper_bounds = [u for (s, (l, u)) in score_intervals]
-    best_set_idx = np.argmax(upper_bounds)
-    best_set_lower_bound = [l for (s, (l, u)) in score_intervals][best_set_idx]
+    # print("Find best score, and undistinguishable scores")
+    # # find the highest upper confidence interval bound, then its lower bound,
+    # # and all the intervals with upper bound higher than this lower bound
+    # score_intervals = cv_scores.items()
+    # #[a for(a,s) in sorted(initial_ranking, key=operator.itemgetter(1), reverse=True)][:10]
+    # upper_bounds = [u for (s, (l, u)) in score_intervals]
+    # best_set_idx = np.argmax(upper_bounds)
+    # best_set_lower_bound = [l for (s, (l, u)) in score_intervals][best_set_idx]
 
-    best_sets = [s for (s, (l, u)) in score_intervals if u >=
-                 best_set_lower_bound]
+    # best_sets = [s for (s, (l, u)) in score_intervals if u >=
+                 # best_set_lower_bound]
+    # print(best_sets)
+
+    # Select the smallest mean errors
+    smallest_best_set = np.argmin(cv_scores[:, 0] ** 2 + cv_scores[:, 1])
 
     # Take the smallest best set
     # TODO: implement a clever way of breaking ties
-    set_lengths = [len(S[i]) for s in best_sets]
-    smallest_best_set = best_sets[np.argmin(set_lengths)]
+    # set_lengths = [len(subsets[s]) for s in best_sets]
+    # smallest_best_set = best_sets[np.argmin(set_lengths)]
 
-    return S[smallest_best_set], cv_scores[smallest_best_set]
+    return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
 boston = load_boston()
