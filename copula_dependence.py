@@ -61,10 +61,3 @@ def mRMR(X, Y, S, kernel = sk.rbf_kernel):
 iris = load_iris()
 X = iris.data
 y = iris.target
-
-print mRMR(X,y,[0,1])
-print mRMR(X,y,[0,2])
-print mRMR(X,y,[0,3])
-print mRMR(X,y,[1,2])
-print mRMR(X,y,[1,3])
-print mRMR(X,y,[2,3])
