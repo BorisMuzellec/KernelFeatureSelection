@@ -8,9 +8,10 @@ Created on Tue Mar 21 14:30:41 2017
 import numpy as np
 import copy
 import sklearn.metrics.pairwise as sk
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_iris, load_boston
 from sklearn.model_selection import cross_val_score
 from sklearn import svm
+from sklearn import ensemble
 
 from tqdm import tqdm
 
@@ -52,7 +53,7 @@ def incremental_selection(X, Y, k, method = 'copula', kernel = sk.rbf_kernel):
                   
       return Sets
       
-def selection_heuristic(X, Y, k, classifier, method = 'copula', kernel = sk.rbf_kernel, cv = 5):
+def selection_heuristic(X, Y, k, classifier, method = 'copula', kernel = sk.rbf_kernel, cv = 5, loss = True):
       """
       The selection heuristic from Peng and al.
       - use incremental selection to find n sequential feature sets (n large)
@@ -67,7 +68,7 @@ def selection_heuristic(X, Y, k, classifier, method = 'copula', kernel = sk.rbf_
       print("Computing CV scores")
       for i in tqdm(range(k)):
             scores = cross_val_score(classifier, X[:,S[i]], y, cv=5)
-            cv_scores[i] = (scores.mean() - 2*scores.std(), scores.mean() + 2*scores.std())
+            cv_scores[i] = (scores.mean() - 2*scores.std(), scores.mean() + 2*scores.std()) if not loss else (-scores.mean() - 2*scores.std(), -scores.mean() + 2*scores.std())
             
             
       print("Find best score, and undistinguishable scores")     
@@ -88,12 +89,17 @@ def selection_heuristic(X, Y, k, classifier, method = 'copula', kernel = sk.rbf_
       
       return S[smallest_best_set], cv_scores[smallest_best_set]
       
-iris = load_iris()
-X = iris.data
-y = iris.target
+boston = load_boston()
+X = boston.data
+y = boston.target
 
 #print(incremental_selection(X,y,3))
 
-clf = svm.SVC(kernel='linear', C=1)
+#clf = svm.SVC(kernel='rbf', C=1)
 
-print(selection_heuristic(X, y, 4, clf, method = 'copula', kernel = sk.rbf_kernel, cv = 5))
+params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
+          'learning_rate': 0.1, 'loss': 'ls'}
+clf = ensemble.GradientBoostingRegressor(**params)
+
+
+print(selection_heuristic(X, y, 6, clf, method = 'copula', kernel = sk.rbf_kernel, cv = 5, loss = True))
