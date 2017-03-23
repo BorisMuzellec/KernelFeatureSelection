@@ -6,7 +6,6 @@ from __future__ import division
 import numpy as np
 from math import erf, pi
 import sklearn.metrics.pairwise as sk
-from sklearn.datasets import load_iris
 
 
 def approx_copula(X):
@@ -40,7 +39,7 @@ def erf_aux(Z, gamma):
                   
                   
     
-def independence_measure(Z, kernel=sk.rbf_kernel, gamma = 1./12):
+def dependency_measure(Z, kernel=sk.rbf_kernel, gamma = 1./12):
     """
     input:
           Z: copula approximation (Z_i,j = rank of x_i wrt the j-th feature)
@@ -76,15 +75,10 @@ def mRMR(X, Y, S, kernel=sk.rbf_kernel):
     maxRelevance = 0
     minRedundancy = 0
     for i in S:
-        maxRelevance += independence_measure(Z[:, (i, -1)], kernel)
+        maxRelevance += dependency_measure(Z[:, (i, -1)], kernel)
         for j in S:
-            minRedundancy += independence_measure(Z[:, (i, j)], kernel)
+            minRedundancy += dependency_measure(Z[:, (i, j)], kernel)
     maxRelevance /= n
     minRedundancy /= n**2
 
     return maxRelevance - minRedundancy
-
-
-iris = load_iris()
-X = iris.data
-y = iris.target

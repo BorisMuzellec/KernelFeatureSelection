@@ -111,7 +111,7 @@ boston = load_boston()
 X = boston.data
 y = boston.target
 
-#print(incremental_selection(X,y, 6, gamma = 6))
+print(incremental_selection(X,y, 1, gamma = 6))
 
 #clf = svm.SVC(kernel='rbf', C=1)
 
@@ -120,5 +120,5 @@ params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
 clf = ensemble.GradientBoostingRegressor(**params)
 
 
-print(selection_heuristic(X, y, 12, clf, method='copula',
-                          kernel=sk.rbf_kernel, gamma = 6, cv = 5))
+#print(selection_heuristic(X, y, 12, clf, method='copula',
+#                          kernel=sk.rbf_kernel, gamma = 6, cv = 5))
