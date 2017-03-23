@@ -41,7 +41,7 @@ we have that
 \begin{align}
 \int_0^1\int_0^1 \exp\left(\frac{-(u-u')^2}{2\sigma^2}\right)du du' &= 2\sigma^2 \int_0^1\int_{\frac{-u'}{2\sigma^2}}^{\frac{1-u'}{2\sigma^2}}\exp(-z^2)dzdu'\\
 &= \frac{\sqrt{\pi}}{2\gamma} \int_0^1 \left[\mathrm{erf}(\gamma(1-u')) + \mathrm{erf}(\gamma u')\right]du' \\
-&= \frac{\sqrt{\pi}}{\gamma}\left[\mathrm{erf}(\gamma) - \frac{\exp(-\gamma^2)}{\gamma\sqrt{\pi}} - \frac{1}{\gamma\sqrt{\pi}}\right]
+&= \frac{\sqrt{\pi}}{\gamma}\left[\mathrm{erf}(\gamma) - \frac{\exp(-\gamma^2)}{\gamma\sqrt{\pi}} + \frac{1}{\gamma\sqrt{\pi}}\right]
 \end{align}
 
 This finally yields
@@ -50,7 +50,7 @@ This finally yields
 \begin{aligned}
 \mathcal{M}_u^2[\mathcal{F}, \boldsymbol{Z}_{1:m}, P_U]  &= \frac{1}{m(m-1)}\sum_{i\neq j}k(\boldsymbol{Z}_{i}, \boldsymbol{Z}_{j})\\
 & - \frac{2}{m}\sum_{i=1}^{m}\prod_{j=1}^{d}\left[\frac{\sqrt{\pi}}{2\gamma}[\mathrm{erf}(\gamma(1 - \boldsymbol{Z}_{ij})) + \mathrm{erf}(\gamma\boldsymbol{Z}_{ij})]\right]\\
-& + \left[\frac{\sqrt{\pi}}{\gamma}\left[\mathrm{erf}(\gamma) - \frac{\exp(-\gamma^2)}{\gamma\sqrt{\pi}} - \frac{1}{\gamma\sqrt{\pi}}\right]\right]^d
+& + \left[\frac{\sqrt{\pi}}{\gamma}\left[\mathrm{erf}(\gamma) - \frac{\exp(-\gamma^2)}{\gamma\sqrt{\pi}} + \frac{1}{\gamma\sqrt{\pi}}\right]\right]^d
 \end{aligned}
 \end{equation}
 
