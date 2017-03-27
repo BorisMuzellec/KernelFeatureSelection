@@ -1,10 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 from __future__ import division
-
+from math import erf, pi
 
 import numpy as np
-from math import erf, pi
 import sklearn.metrics.pairwise as sk
 
 
@@ -19,27 +18,28 @@ def approx_copula(X):
 
 
 def erf_aux(Z, gamma):
-      (m,d) = Z.shape
-      
-      ker  = sk.rbf_kernel(Z, Z)
-      np.fill_diagonal(ker, 0)
-      ker_sum = ker.sum()/(m*(m-1))
-      
-      sum_ = 0
-      for i in range(m):
-            prod_ = 1
-            for j in range(d):
-                  prod_ *= (np.sqrt(pi) / (2 * gamma) )* (erf(gamma *(1 - Z[i,j])) + erf(gamma * Z[i,j]))
-            sum_ += prod_
-            
-      integral = np.power(np.sqrt(pi)/gamma*erf(gamma) - (np.exp(-gamma**2) - 1)/gamma**2, d)
-      
-      #print Z
-      return ker_sum - 2./m * sum_ + integral
-                  
-                  
-    
-def dependency_measure(Z, kernel=sk.rbf_kernel, gamma = 1./12):
+    (m, d) = Z.shape
+
+    ker = sk.rbf_kernel(Z, Z)
+    np.fill_diagonal(ker, 0)
+    ker_sum = ker.sum() / (m * (m - 1))
+
+    sum_ = 0
+    for i in range(m):
+        prod_ = 1
+        for j in range(d):
+            prod_ *= (np.sqrt(pi) / (2 * gamma)) * \
+                (erf(gamma * (1 - Z[i, j])) + erf(gamma * Z[i, j]))
+        sum_ += prod_
+
+    integral = np.power(np.sqrt(pi) / gamma * erf(gamma) -
+                        (np.exp(-gamma**2) - 1) / gamma**2, d)
+
+    # print Z
+    return ker_sum - 2. / m * sum_ + integral
+
+
+def dependency_measure(Z, kernel=sk.rbf_kernel, gamma=1. / 12):
     """
     input:
           Z: copula approximation (Z_i,j = rank of x_i wrt the j-th feature)
@@ -48,14 +48,15 @@ def dependency_measure(Z, kernel=sk.rbf_kernel, gamma = 1./12):
     """
     m = Z.shape[0]
     n = 5 * m
-    
+
     if kernel == sk.rbf_kernel:
-          I = erf_aux(Z, gamma)
+        I = erf_aux(Z, gamma)
     else:
-          U = np.random.uniform(size=(n, Z.shape[1]))
-          I = kernel(Z, Z).mean() + kernel(U, U).mean() - 2 * kernel(Z, U).mean() 
+        U = np.random.uniform(size=(n, Z.shape[1]))
+        I = kernel(Z, Z).mean() + kernel(U, U).mean() - 2 * kernel(Z, U).mean()
 
     return np.sqrt(I)
+
 
 def mRMR(X, Y, S, kernel=sk.rbf_kernel):
     """
