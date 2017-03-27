@@ -36,7 +36,7 @@ def incremental_selection(X, Y, k, measure):
     m = X.shape[1]
 
     X_ = np.c_[X, Y]
-    Z = approx_copula(X_) if measure.measure =='copula' else X_
+    Z = approx_copula(X_) if measure.measure == 'copula' else X_
 
     for i in trange(k, leave=False):
         best_score = -1E3
@@ -45,9 +45,9 @@ def incremental_selection(X, Y, k, measure):
             for j in tqdm(set(np.arange(m)) - set(S), leave=False):
                 score = 0
                 for s in S:
-                    score += measure.score(Z[:, j],Z[:, s])
+                    score += measure.score(Z[:, j], Z[:, s])
                     #print('dependency between %u and %u: %f' %(j,s,copula_measure(Z[:, (j, s)], kernel, gamma)))
-                score = measure.score(Z[:, j,], Z[:, -1]) - score / i
+                score = measure.score(Z[:, j, ], Z[:, -1]) - score / i
                 #print('dependency between %u and label: %f' %(j, copula_measure(Z[:, (j, -1)], kernel, gamma)))
 
                 if score > best_score:
@@ -55,12 +55,12 @@ def incremental_selection(X, Y, k, measure):
                     best_feature = j
         else:
             for j in range(m):
-                score = measure.score(Z[:, j,], Z[:, -1]) 
+                score = measure.score(Z[:, j, ], Z[:, -1])
                 if score > best_score:
                     best_score = score
                     best_feature = j
 
-        print('best_feature: %u , best_score: %f' % (best_feature, best_score))
+        # print('best_feature: %u , best_score: %f' % (best_feature, best_score))
         S.append(best_feature)
         subsets.append(copy.deepcopy(S))
 
@@ -77,7 +77,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
 
     print("Performing incremental selection")
     subsets = incremental_selection(
-        X, Y, k, measure= measure)
+        X, Y, k, measure=measure)
     cv_scores = np.zeros((k, 2))
 
     print("Computing CV scores")
@@ -87,12 +87,10 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
         # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
-
     # Select the smallest mean errors
     print(cv_scores)
     #smallest_best_set = np.argmin(cv_scores[:, 0] ** 2 + cv_scores[:, 1])
     smallest_best_set = np.argmax(cv_scores[:, 0])
-
 
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
@@ -107,7 +105,7 @@ def bahsic_selection(X, y, t, measure):
             t: desired number of features
         Output:
             subset of features of size t
-            
+
         WARNING: does not support copula yet
     """
     S = set(range(X.shape[1]))
@@ -141,12 +139,14 @@ def fohsic_selection(X, y, t, measure):
             t: desired number of output features
         Output:
             subset of features of size t
-            
+
       WARNING: does not support copula yet
     """
     S = set(range(X.shape[1]))
     T = list()
     while len(S) > 1:
+        if len(T) > t:
+            return T[:t]
         subset_size = int(math.ceil(0.1 * len(S)))
         best_hsic_sum = -np.inf
         best_subset = None
@@ -161,10 +161,8 @@ def fohsic_selection(X, y, t, measure):
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
-    
+
     return (T + list(S))[:t]
-
-
 
 
 boston = load_boston()
@@ -172,8 +170,11 @@ X = boston.data
 y = boston.target
 
 
-HSIC = Dependency_Measure(measure = 'hsic', feature_kernel = sk.rbf_kernel, label_kernel= sk.rbf_kernel, gamma=1./12)
-COPULA = Dependency_Measure(measure = 'copula', feature_kernel = sk.rbf_kernel,  gamma= 6)
+HSIC = Dependency_Measure(measure='hsic', feature_kernel=sk.rbf_kernel,
+                          label_kernel=sk.rbf_kernel, gamma=1. / 12)
+COPULA = Dependency_Measure(
+    measure='copula', feature_kernel=sk.rbf_kernel, gamma=6)
+MUTUAL_INFO = Dependency_Measure(measure='mutual_information', feature_kernel=sk.rbf_kernel, gamma=6)
 
 #print(bahsic_selection(X, y, 4))
 
@@ -184,4 +185,4 @@ params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
 clf = ensemble.GradientBoostingRegressor(**params)
 
 
-print(selection_heuristic(X, y, 6, clf, measure = COPULA))
+print(selection_heuristic(X, y, 6, clf, measure=MUTUAL_INFO))

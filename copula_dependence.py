@@ -46,7 +46,7 @@ def copula_measure(Z_X, Z_Y, kernel=sk.rbf_kernel, gamma=1. / 12):
     output:
           kernel copula independence measure of X (where Z = copula(X))
     """
-    
+
     Z = np.c_[Z_X, Z_Y]
     m = Z.shape[0]
     n = 5 * m
