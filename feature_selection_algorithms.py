@@ -134,15 +134,16 @@ def hsic_approx(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_
     return hsic
 
 
-def bahsic_selection(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_clf_kernel):
+def bahsic_selection(X, y, t, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_clf_kernel):
     """Implement Backward Elimination using Hilbert-Schmidt Independence Criterion
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
         Input:
             X: dataset features
             y: dataset labels
+            t: desired number of features
         Output:
-            subset of features
+            subset of features of size t
     """
     S = set(range(X.shape[1]))
     T = list()
@@ -164,14 +165,49 @@ def bahsic_selection(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=bi
         S = S - best_subset
         T = T + list(best_subset)
 
-    return T + list(S)
+    return (T + list(S))[-t:]
+
+
+def fohsic_selection(X, y, t, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_clf_kernel):
+    """Implement Forward Selection using Hilbert-Schmidt Independence Criterion
+        Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
+
+        Input:
+            X: dataset features
+            y: dataset labels
+            t: desired number of output features
+        Output:
+            subset of features of size t
+    """
+    S = set(range(X.shape[1]))
+    T = list()
+    while len(S) > 1:
+        sigma = sigma
+        subset_size = int(math.ceil(0.1 * len(S)))
+        best_hsic_sum = -np.inf
+        best_subset = None
+        for subset in tqdm(combinations(S, subset_size), total=int(binom(len(S), subset_size)), leave=False):
+            subset = set(subset)
+            hsic_sum = 0.0
+            for j in subset:
+                feats = np.array(T + [j])
+                hsic_sum += hsic_approx(X[:, feats], y, feat_kernel, sigma, label_kernel)
+            if hsic_sum > best_hsic_sum:
+                best_hsic_sum = hsic_sum
+                best_subset = subset
+        S = S - best_subset
+        T = T + list(best_subset)
+    
+    return (T + list(S))[:t]
+
+
 
 
 boston = load_boston()
 X = boston.data
 y = boston.target
-print(X.shape)
-print(bahsic_selection(X, y))
+
+print(fohsic_selection(X, y, 5))
 
 #clf = svm.SVC(kernel='rbf', C=1)
 
