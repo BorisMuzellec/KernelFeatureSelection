@@ -125,11 +125,12 @@ def hsic_approx(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_
     for i in range(m):
         K[i, i] = 0
         L[i, i] = 0
-    
+
     oneK = np.ones(m).dot(K)
     Lone = L.dot(np.ones(m))
     trKL = np.multiply(K, L.T).sum()
-    hsic = 1 / (m * (m - 3)) * (trKL + 1 / ((m - 1) * (m - 2)) * oneK.dot(np.ones(m) * np.ones(m).dot(Lone)) - 2 / (m - 2) * oneK.dot(Lone))
+    hsic = 1 / (m * (m - 3)) * (trKL + 1 / ((m - 1) * (m - 2)) *
+                                oneK.dot(np.ones(m) * np.ones(m).dot(Lone)) - 2 / (m - 2) * oneK.dot(Lone))
     return hsic
 
 
@@ -144,35 +145,32 @@ def bahsic_selection(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=bi
             subset of features
     """
     S = set(range(X.shape[1]))
-    T = set()
-    while len(S) > 0:
+    T = list()
+    while len(S) > 1:
         sigma = sigma
-        subset_size = int(math.ceil(0.1 * len(S))) 
-        if subset_size <= 1:
-            return T
+        subset_size = int(math.ceil(0.1 * len(S)))
         best_hsic_sum = -np.inf
         best_subset = None
         for subset in tqdm(combinations(S, subset_size), total=int(binom(len(S), subset_size)), leave=False):
             subset = set(subset)
             hsic_sum = 0.0
             for j in subset:
-                feats = np.array(list(subset - set([j])))
-                hsic_sum += hsic_approx(X[:, feats], y, feat_kernel, sigma, label_kernel)
+                feats = np.array(list(S - set([j])))
+                hsic_sum += hsic_approx(X[:, feats],
+                                        y, feat_kernel, sigma, label_kernel)
             if hsic_sum > best_hsic_sum:
                 best_hsic_sum = hsic_sum
                 best_subset = subset
         S = S - best_subset
-        T = T.union(best_subset)
+        T = T + list(best_subset)
 
-    return T
-
-
+    return T + list(S)
 
 
 boston = load_boston()
 X = boston.data
 y = boston.target
-
+print(X.shape)
 print(bahsic_selection(X, y))
 
 #clf = svm.SVC(kernel='rbf', C=1)
