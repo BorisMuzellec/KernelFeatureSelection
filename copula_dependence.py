@@ -39,13 +39,15 @@ def erf_aux(Z, gamma):
     return ker_sum - 2. / m * sum_ + integral
 
 
-def dependency_measure(Z, kernel=sk.rbf_kernel, gamma=1. / 12):
+def copula_measure(Z_X, Z_Y, kernel=sk.rbf_kernel, gamma=1. / 12):
     """
     input:
           Z: copula approximation (Z_i,j = rank of x_i wrt the j-th feature)
     output:
           kernel copula independence measure of X (where Z = copula(X))
     """
+    
+    Z = np.c_[Z_X, Z_Y]
     m = Z.shape[0]
     n = 5 * m
 
@@ -76,9 +78,9 @@ def mRMR(X, Y, S, kernel=sk.rbf_kernel):
     maxRelevance = 0
     minRedundancy = 0
     for i in S:
-        maxRelevance += dependency_measure(Z[:, (i, -1)], kernel)
+        maxRelevance += copula_measure(Z[:, (i, -1)], kernel)
         for j in S:
-            minRedundancy += dependency_measure(Z[:, (i, j)], kernel)
+            minRedundancy += copula_measure(Z[:, (i, j)], kernel)
     maxRelevance /= n
     minRedundancy /= n**2
 
