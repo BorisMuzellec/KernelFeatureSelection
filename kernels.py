@@ -13,7 +13,7 @@ import numpy as np
 
 
 def binary_clf_kernel(y, normalize=False):
-    n = len(y)
+    n = y.shape[0]
     L = -1 * np.ones((n, n))
 
     for i in range(n):
@@ -25,7 +25,7 @@ def binary_clf_kernel(y, normalize=False):
 
 
 def multiclass_clf_kernel(y, normalize=False):
-    n = len(y)
+    n = y.shape[0]
     counts = Counter(y)
     L = np.zeros((n, n))
 

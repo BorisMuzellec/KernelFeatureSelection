@@ -6,8 +6,11 @@ Created on Tue Mar 21 14:30:41 2017
 @author: boris
 """
 import copy
+from itertools import combinations
+import math
 
 import numpy as np
+from scipy.special import binom
 import sklearn.metrics.pairwise as sk
 from sklearn.datasets import load_iris, load_boston
 from sklearn.model_selection import cross_val_score
@@ -16,6 +19,7 @@ from sklearn import ensemble
 from tqdm import tqdm, trange
 
 from copula_dependence import approx_copula, dependency_measure
+from kernels import binary_clf_kernel
 
 # There's probably room for optimization
 
@@ -111,11 +115,65 @@ def selection_heuristic(X, Y, k, classifier, method='copula', kernel=sk.rbf_kern
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
+def hsic_approx(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_clf_kernel):
+    """Compute an approximation of the Hilbert-Schmidt Independence Criterion (HSIC1)"""
+    # TODO: use sigma parameter
+    K = feat_kernel(X, X)
+    L = label_kernel(y, y)
+    m = X.shape[0]
+
+    for i in range(m):
+        K[i, i] = 0
+        L[i, i] = 0
+    
+    oneK = np.ones(m).dot(K)
+    Lone = L.dot(np.ones(m))
+    trKL = np.multiply(K, L.T).sum()
+    hsic = 1 / (m * (m - 3)) * (trKL + 1 / ((m - 1) * (m - 2)) * oneK.dot(np.ones(m) * np.ones(m).dot(Lone)) - 2 / (m - 2) * oneK.dot(Lone))
+    return hsic
+
+
+def bahsic_selection(X, y, feat_kernel=sk.rbf_kernel, sigma=1.0, label_kernel=binary_clf_kernel):
+    """Implement Backward Elimination using Hilbert-Schmidt Independence Criterion
+        Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
+
+        Input:
+            X: dataset features
+            y: dataset labels
+        Output:
+            subset of features
+    """
+    S = set(range(X.shape[1]))
+    T = set()
+    while len(S) > 0:
+        sigma = sigma
+        subset_size = int(math.ceil(0.1 * len(S))) 
+        if subset_size <= 1:
+            return T
+        best_hsic_sum = -np.inf
+        best_subset = None
+        for subset in tqdm(combinations(S, subset_size), total=int(binom(len(S), subset_size)), leave=False):
+            subset = set(subset)
+            hsic_sum = 0.0
+            for j in subset:
+                feats = np.array(list(subset - set([j])))
+                hsic_sum += hsic_approx(X[:, feats], y, feat_kernel, sigma, label_kernel)
+            if hsic_sum > best_hsic_sum:
+                best_hsic_sum = hsic_sum
+                best_subset = subset
+        S = S - best_subset
+        T = T.union(best_subset)
+
+    return T
+
+
+
+
 boston = load_boston()
 X = boston.data
 y = boston.target
 
-print(incremental_selection(X, y, 1, gamma=6))
+print(bahsic_selection(X, y))
 
 #clf = svm.SVC(kernel='rbf', C=1)
 
