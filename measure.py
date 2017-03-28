@@ -15,13 +15,16 @@ from kernel_dependency import hsic_approx
 
 
 class Dependency_Measure(object):
-    """Rank recipients from the adress books of an user based on k-NN classification
-    on the tf-idf representations of the emails."""
+    """
+    A generic class for dependency measures
+    """
 
     def __init__(self, measure='copula', feature_kernel=sk.rbf_kernel, label_kernel=sk.rbf_kernel, gamma=1. / 12):
         """
         Args:
-            emails_info (pandas.DataFrame): dataframe with emails info (mid, date, body, recipients, sender)
+              Measure type (copula, hsic or mutual_information)
+              
+              Optional arguments
         """
 
         assert(measure in ['copula', 'hsic', 'mutual_information'])

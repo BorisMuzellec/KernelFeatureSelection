@@ -75,12 +75,12 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
     - take the smallest set with smallest error
     """
 
-    print("Performing incremental selection")
+    print("Performing incremental selection\n")
     subsets = incremental_selection(
         X, Y, k, measure=measure)
     cv_scores = np.zeros((k, 2))
 
-    print("Computing CV scores")
+    print("Computing CV scores\n")
     for i in trange(k, leave=False):
         scores = cross_val_score(
             classifier, X[:, subsets[i]], y, cv=cv, scoring='neg_mean_squared_error')
@@ -88,40 +88,45 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
     # Select the smallest mean errors
-    print(cv_scores)
+    #print(cv_scores)
     #smallest_best_set = np.argmin(cv_scores[:, 0] ** 2 + cv_scores[:, 1])
     smallest_best_set = np.argmax(cv_scores[:, 0])
 
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
-def bahsic_selection(X, y, t, measure):
-    """Implement Backward Elimination using Hilbert-Schmidt Independence Criterion
+def backward_selection(X, y, t, measure):
+    """Implements Backward Elimination
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
         Input:
             X: dataset features
             y: dataset labels
             t: desired number of features
+            measure: dependency measure
         Output:
             subset of features of size t
 
-        WARNING: does not support copula yet
     """
     S = set(range(X.shape[1]))
     T = list()
+    
+    if measure.measure == 'copula':
+          X = approx_copula(X) 
+          y = approx_copula(y)
+    
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
-        best_hsic_sum = -np.inf
+        best_score_sum = -np.inf
         best_subset = None
         for subset in tqdm(combinations(S, subset_size), total=int(binom(len(S), subset_size)), leave=False):
             subset = set(subset)
-            hsic_sum = 0.0
+            score_sum = 0.0
             for j in subset:
                 feats = np.array(list(S - set([j])))
-                hsic_sum += measure.score(X[:, feats], y)
-            if hsic_sum > best_hsic_sum:
-                best_hsic_sum = hsic_sum
+                score_sum += measure.score(X[:, feats], y)
+            if score_sum > best_score_sum:
+                best_score_sum = score_sum
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
@@ -129,35 +134,39 @@ def bahsic_selection(X, y, t, measure):
     return (T + list(S))[-t:]
 
 
-def fohsic_selection(X, y, t, measure):
-    """Implement Forward Selection using Hilbert-Schmidt Independence Criterion
+def forward_selection(X, y, t, measure):
+    """Implements Forward Selection
         Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
 
         Input:
             X: dataset features
             y: dataset labels
             t: desired number of output features
+            measure: dependency measure
         Output:
             subset of features of size t
-
-      WARNING: does not support copula yet
     """
     S = set(range(X.shape[1]))
     T = list()
+    
+    if measure.measure == 'copula':
+          X = approx_copula(X) 
+          y = approx_copula(y)
+          
     while len(S) > 1:
         if len(T) > t:
             return T[:t]
         subset_size = int(math.ceil(0.1 * len(S)))
-        best_hsic_sum = -np.inf
+        best_score_sum = -np.inf
         best_subset = None
         for subset in tqdm(combinations(S, subset_size), total=int(binom(len(S), subset_size)), leave=False):
             subset = set(subset)
-            hsic_sum = 0.0
+            score_sum = 0.0
             for j in subset:
                 feats = np.array(T + [j])
-                hsic_sum += measure.score(X[:, feats], y)
-            if hsic_sum > best_hsic_sum:
-                best_hsic_sum = hsic_sum
+                score_sum += measure.score(X[:, feats], y)
+            if score_sum > best_score_sum:
+                best_score_sum = score_sum
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
@@ -172,11 +181,13 @@ y = boston.target
 
 HSIC = Dependency_Measure(measure='hsic', feature_kernel=sk.rbf_kernel,
                           label_kernel=sk.rbf_kernel, gamma=1. / 12)
+
 COPULA = Dependency_Measure(
     measure='copula', feature_kernel=sk.rbf_kernel, gamma=6)
+
 MUTUAL_INFO = Dependency_Measure(measure='mutual_information', feature_kernel=sk.rbf_kernel, gamma=6)
 
-#print(bahsic_selection(X, y, 4))
+print(backward_selection(X, y, 4, COPULA))
 
 #clf = svm.SVC(kernel='rbf', C=1)
 
@@ -185,4 +196,4 @@ params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
 clf = ensemble.GradientBoostingRegressor(**params)
 
 
-print(selection_heuristic(X, y, 6, clf, measure=MUTUAL_INFO))
+print(selection_heuristic(X, y, 6, clf, measure=COPULA))
