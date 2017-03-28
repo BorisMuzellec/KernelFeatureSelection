@@ -14,17 +14,10 @@ import math
 
 import numpy as np
 from scipy.special import binom
-import sklearn.metrics.pairwise as sk
-from sklearn.datasets import load_iris, load_boston
 from sklearn.model_selection import cross_val_score
-from sklearn import svm
-from sklearn import ensemble
 from tqdm import tqdm, trange
 
-from measure import Dependency_Measure
-from kernels import binary_clf_kernel
 from copula_dependence import approx_copula
-# There's probably room for optimization
 
 
 def incremental_selection(X, Y, k, measure):
@@ -83,7 +76,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
     print("Computing CV scores\n")
     for i in trange(k, leave=False):
         scores = cross_val_score(
-            classifier, X[:, subsets[i]], y, cv=cv, scoring='neg_mean_squared_error')
+            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error')
         # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
@@ -174,26 +167,3 @@ def forward_selection(X, y, t, measure):
     return (T + list(S))[:t]
 
 
-boston = load_boston()
-X = boston.data
-y = boston.target
-
-
-HSIC = Dependency_Measure(measure='hsic', feature_kernel=sk.rbf_kernel,
-                          label_kernel=sk.rbf_kernel, gamma=1. / 12)
-
-COPULA = Dependency_Measure(
-    measure='copula', feature_kernel=sk.rbf_kernel, gamma=6)
-
-MUTUAL_INFO = Dependency_Measure(measure='mutual_information', feature_kernel=sk.rbf_kernel, gamma=6)
-
-print(backward_selection(X, y, 4, COPULA))
-
-#clf = svm.SVC(kernel='rbf', C=1)
-
-params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
-          'learning_rate': 0.1, 'loss': 'ls'}
-clf = ensemble.GradientBoostingRegressor(**params)
-
-
-print(selection_heuristic(X, y, 6, clf, measure=COPULA))
