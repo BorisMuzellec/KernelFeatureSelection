@@ -106,7 +106,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     
     if measure.measure == 'copula':
           X = approx_copula(X) 
-          y = approx_copula(y)
+          Y = approx_copula(y)
     
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
@@ -117,7 +117,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
             score_sum = 0.0
             for j in subset:
                 feats = np.array(list(S - set([j])))
-                score_sum += measure.score(X[:, feats], y)
+                score_sum += measure.score(X[:, feats], Y)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset
@@ -152,7 +152,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
     
     if measure.measure == 'copula':
           X = approx_copula(X) 
-          y = approx_copula(y)
+          Y = approx_copula(y)
           
     while len(S) > 1:
         if len(T) > t:
@@ -165,7 +165,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
             score_sum = 0.0
             for j in subset:
                 feats = np.array(T + [j])
-                score_sum += measure.score(X[:, feats], y)
+                score_sum += measure.score(X[:, feats], Y)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset
