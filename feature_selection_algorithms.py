@@ -104,9 +104,11 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     S = set(range(X.shape[1]))
     T = list()
     
+    Y = approx_copula(y) if measure.measure == 'copula' else y
+    
     if measure.measure == 'copula':
           X = approx_copula(X) 
-          Y = approx_copula(y)
+          
     
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
@@ -150,9 +152,10 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
     S = set(range(X.shape[1]))
     T = list()
     
+    Y = approx_copula(y) if measure.measure == 'copula' else y
+    
     if measure.measure == 'copula':
           X = approx_copula(X) 
-          Y = approx_copula(y)
           
     while len(S) > 1:
         if len(T) > t:
