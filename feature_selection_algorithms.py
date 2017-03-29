@@ -76,7 +76,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True):
     print("Computing CV scores\n")
     for i in trange(k, leave=False):
         scores = cross_val_score(
-            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
         # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
@@ -127,7 +127,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
         scores = []
         if classifier is not None:
               scores = cross_val_score(
-            classifier, X[:,(T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+            classifier, X[:,(T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
               
 
     return (T + list(S))[-t:], scores.mean(), scores.std()
@@ -175,7 +175,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
         scores = []
         if classifier is not None:
               scores = cross_val_score(
-            classifier, X[:,(T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+            classifier, X[:,(T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
               
 
     return (T + list(S))[:t], scores.mean(), scores.std()

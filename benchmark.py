@@ -24,7 +24,7 @@ BASE_DIR = os.path.abspath(os.path.curdir)
 
 boston = load_boston()
 breast_cancer = load_breast_cancer()
-diabetes = load_diabetes
+diabetes = load_diabetes()
 
 
 HSIC = Dependency_Measure(measure='hsic', feature_kernel=sk.rbf_kernel,
@@ -34,6 +34,74 @@ COPULA = Dependency_Measure(
     measure='copula', feature_kernel=sk.rbf_kernel, gamma=6)
  
 MUTUAL_INFO = Dependency_Measure(measure='mutual_information', feature_kernel=sk.rbf_kernel, gamma=6)
+
+print('Classification Problems')
+
+
+boost_params = {'loss': 'deviance', 'learning_rate': 0.1, 'n_estimators':100,
+                'subsample': 1.0, 'max_depth': 3}
+          
+svm_params = {'C': 1.0, 'kernel': 'rbf', 'degree': 3, 'gamma': 'auto'}
+          
+BoostingClassifier = ensemble.GradientBoostingClassifier(**boost_params)
+SVMClassifier = svm.SVC(**svm_params)
+
+classifiers = [SVMClassifier, BoostingClassifier]
+
+print('Classification Problem: breast_cancer Dataset')
+
+
+accuracy_scores = {}
+measures = ['mutual_information', 'hsic', 'copula']
+kernels = [sk.rbf_kernel, sk.polynomial_kernel]
+
+#Compare seletion methods for hsic and copula on rbf kernel
+#with a svm classifier and a gradient boosting classifiers
+alg_accuracy_scores = {}
+for measure in ['hsic','copula']:
+      alg_accuracy_scores[measure] = {}
+      alg_accuracy_scores[measure]['backward'] = {}
+      alg_accuracy_scores[measure]['forward'] ={}
+      alg_accuracy_scores[measure]['heuristic'] = {}
+      
+      for clf in classifiers:
+            alg_accuracy_scores[measure]['backward'][clf] =  backward_selection(breast_cancer.data, breast_cancer.target, 6,
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
+            alg_accuracy_scores[measure]['forward'][clf] =  forward_selection(breast_cancer.data, breast_cancer.target, 6,
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
+            alg_accuracy_scores[measure]['heuristic'][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
+            regressor, clf = Dependency_Measure(measure=measure), regression = False)
+                  
+
+
+#Compare hsic and copula on rbf and polynomial kernels 
+#using heuristic selection with a linear regressor and a gradient boosting regressor
+for measure in ['hsic','copula']:
+      accuracy_scores[measure] = {}
+      for kernel in kernels:
+            accuracy_scores[measure][kernel] = {}
+            for clf in classifiers:
+                  accuracy_scores[measure][kernel][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
+                  clf, measure = Dependency_Measure(measure=measure, feature_kernel = kernel), regression = False)
+
+#Compare mutual_information and hsic and copula with linear kernels  
+#using heuristic selection with a svm classifier and a gradient boosting classifier
+
+Linear_accuracy_scores = {}
+for measure in ['hsic','copula']:
+      Linear_accuracy_scores[measure] = {}
+      for clf in classifiers:
+            Linear_accuracy_scores[measure][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
+            clf, measure = Dependency_Measure(measure=measure, feature_kernel = sk.linear_kernel), regression = False)
+  
+print('Saving Classification Benchmark \n')                  
+
+breast_cancer_benchmark = [accuracy_scores, Linear_accuracy_scores, alg_accuracy_scores]
+                  
+with open('breast_cancer_Benchmark.dat', "wb") as f:
+    pickle.dump(len(breast_cancer_benchmark), f)
+    for value in breast_cancer_benchmark:
+        pickle.dump(value, f)   
 
 params = {'n_estimators': 100, 'max_depth': 4, 'min_samples_split': 2,
           'learning_rate': 0.1, 'loss': 'ls'}
@@ -80,7 +148,7 @@ for measure in ['hsic','copula']:
                   regressor, measure = Dependency_Measure(measure=measure, feature_kernel = kernel))
 
 #Compare mutual_information and hsic and copula with linear kernels  
-#using heuristic selection with a linear regressor and a gradient boosting 
+#using heuristic selection with a linear regressor and a gradient boosting regressor
 
 Linear_L2_scores = {}
 for measure in ['hsic','copula']:
@@ -90,7 +158,7 @@ for measure in ['hsic','copula']:
             regressor, measure = Dependency_Measure(measure=measure, feature_kernel = sk.linear_kernel))
   
 
-#TODO: Kernel paramater comparison
+#TODO: Kernel parameter comparison
             
 print('Saving Regression Benchmark \n')                  
 
@@ -103,5 +171,4 @@ with open('Boston_Benchmark.dat', "wb") as f:
                 
 #with open(os.path.join(BASE_DIR, 'Boston_Benchmark.npy'), 'wb') as f:
 #      np.save(f, L2_scores)
-
-print('Classification Problems')
+     
