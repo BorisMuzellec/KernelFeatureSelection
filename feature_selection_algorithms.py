@@ -60,7 +60,7 @@ def incremental_selection(X, Y, k, measure):
     return subsets
 
 
-def selection_heuristic(X, Y, k, classifier, measure, cv=10):
+def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True):
     """
     The selection heuristic from Peng and al.
     - use incremental selection to find n sequential feature sets (n large)
@@ -76,7 +76,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
     print("Computing CV scores\n")
     for i in trange(k, leave=False):
         scores = cross_val_score(
-            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error')
+            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
         # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
@@ -88,7 +88,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10):
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
-def backward_selection(X, y, t, measure):
+def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = True):
     """Implements Backward Elimination
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -123,11 +123,17 @@ def backward_selection(X, y, t, measure):
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
+              
+        scores = []
+        if classifier is not None:
+              scores = cross_val_score(
+            classifier, X[:,[T + list(S)][:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+              
 
-    return (T + list(S))[-t:]
+    return (T + list(S))[-t:],
 
 
-def forward_selection(X, y, t, measure):
+def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = True):
     """Implements Forward Selection
         Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -138,6 +144,8 @@ def forward_selection(X, y, t, measure):
             measure: dependency measure
         Output:
             subset of features of size t
+            if classifier not None: the cv score of the classifier on the chosen subset
+                  
     """
     S = set(range(X.shape[1]))
     T = list()
@@ -163,7 +171,13 @@ def forward_selection(X, y, t, measure):
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
+        
+        scores = []
+        if classifier is not None:
+              scores = cross_val_score(
+            classifier, X[:,[T + list(S)][:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+              
 
-    return (T + list(S))[:t]
+    return (T + list(S))[:t], scores.mean(), scores.std()
 
 
