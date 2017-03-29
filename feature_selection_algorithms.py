@@ -127,10 +127,10 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
         scores = []
         if classifier is not None:
               scores = cross_val_score(
-            classifier, X[:,[T + list(S)][:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+            classifier, X[:,(T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
               
 
-    return (T + list(S))[-t:],
+    return (T + list(S))[-t:], scores.mean(), scores.std()
 
 
 def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = True):
@@ -175,7 +175,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
         scores = []
         if classifier is not None:
               scores = cross_val_score(
-            classifier, X[:,[T + list(S)][:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
+            classifier, X[:,(T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else accuracy)
               
 
     return (T + list(S))[:t], scores.mean(), scores.std()

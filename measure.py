@@ -32,7 +32,8 @@ class Dependency_Measure(object):
         self.measure = measure
         self.feature_kernel = feature_kernel
         self.label_kernel = label_kernel
-        self.gamma = gamma
+        self.gamma = gamma if feature_kernel != sk.linear_kernel else None
+              
 
         if self.measure == 'copula':
             self.scorer = lambda x, y: copula_measure(

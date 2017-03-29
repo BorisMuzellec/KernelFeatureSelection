@@ -31,7 +31,7 @@ import sklearn.metrics.pairwise as sk
 #    
 def hsic_approx(X, y, feature_kernel=sk.rbf_kernel, label_kernel = sk.rbf_kernel, gamma = 1./12):
     """Compute an approximation of the Hilbert-Schmidt Independence Criterion (HSIC1)"""
-    K = feature_kernel(X, X, gamma)
+    K = feature_kernel(X, X, gamma) if gamma is not None else feature_kernel(X,X)
     L = label_kernel(y, y)
     m = X.shape[0]
     
