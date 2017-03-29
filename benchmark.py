@@ -70,7 +70,7 @@ for measure in ['hsic','copula']:
             alg_accuracy_scores[measure]['forward'][clf] =  forward_selection(breast_cancer.data, breast_cancer.target, 6,
             classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
             alg_accuracy_scores[measure]['heuristic'][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
-            regressor, clf = Dependency_Measure(measure=measure), regression = False)
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
                   
 
 
