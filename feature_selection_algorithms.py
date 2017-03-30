@@ -27,12 +27,22 @@ def incremental_selection(X, Y, k, measure, copula = None):
     S = []
     subsets = []
     m = X.shape[1]
+    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
 
     X_ = np.c_[X, Y]
     if measure.measure == 'copula':
           approx_copula(X_) if copula is None else copula
     else:
           Z = X_
+    
+    if measure.measure == 'hsic':
+        L = measure.label_kernel(Y, Y)
+        for i in range(Y.shape[0]):
+            L[i, i] = 0
+        Lones = L.dot(np.ones(X.shape[0]))
+    else:
+        L = None
+        Lones = None
 
     for i in trange(k, leave=False):
         best_score = -1E3
@@ -41,9 +51,9 @@ def incremental_selection(X, Y, k, measure, copula = None):
             for j in tqdm(set(np.arange(m)) - set(S), leave=False):
                 score = 0
                 for s in S:
-                    score += measure.score(Z[:, j], Z[:, s])
+                    score += measure.score(Z[:, j], Z[:, s], L, Lones)
                     #print('dependency between %u and %u: %f' %(j,s,copula_measure(Z[:, (j, s)], kernel, gamma)))
-                score = measure.score(Z[:, j, ], Z[:, -1]) - score / i
+                score = measure.score(Z[:, j, ], Z[:, -1], L, Lones) - score / i
                 #print('dependency between %u and label: %f' %(j, copula_measure(Z[:, (j, -1)], kernel, gamma)))
 
                 if score > best_score:
@@ -51,7 +61,7 @@ def incremental_selection(X, Y, k, measure, copula = None):
                     best_feature = j
         else:
             for j in range(m):
-                score = measure.score(Z[:, j, ], Z[:, -1])
+                score = measure.score(Z[:, j, ], Z[:, -1], L, Lones)
                 if score > best_score:
                     best_score = score
                     best_feature = j
@@ -108,10 +118,19 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     T = list()
     
     Y = approx_copula(y) if measure.measure == 'copula' else y
+    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
     
     if measure.measure == 'copula':
           X = approx_copula(X) if copula is None else copula[:,:-1]
-          
+    
+    if measure.measure == 'hsic':
+        L = measure.label_kernel(Y, Y)
+        for i in range(Y.shape[0]):
+            L[i, i] = 0
+        Lones = L.dot(np.ones(X.shape[0]))
+    else:
+        L = None
+        Lones = None
     
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
@@ -122,7 +141,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
             score_sum = 0.0
             for j in subset:
                 feats = np.array(list(S - set([j])))
-                score_sum += measure.score(X[:, feats], Y)
+                score_sum += measure.score(X[:, feats], Y, L, Lones)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset
@@ -156,10 +175,20 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
     T = list()
     
     Y = approx_copula(y) if measure.measure == 'copula' else y
+    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
     
     if measure.measure == 'copula':
           X = approx_copula(X) if copula is None else copula[:,:-1] 
           
+    if measure.measure == 'hsic':
+        L = measure.label_kernel(Y, Y)
+        for i in range(Y.shape[0]):
+            L[i, i] = 0
+        Lones = L.dot(np.ones(X.shape[0]))
+    else:
+        L = None
+        Lones = None
+
     while len(S) > 1:
         if len(T) > t:
             return T[:t]
@@ -171,7 +200,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
             score_sum = 0.0
             for j in subset:
                 feats = np.array(T + [j])
-                score_sum += measure.score(X[:, feats], Y)
+                score_sum += measure.score(X[:, feats], Y, L, Lones)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset

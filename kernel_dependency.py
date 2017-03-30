@@ -29,19 +29,19 @@ import sklearn.metrics.pairwise as sk
 #    return (np.trace(KL) + K.sum() * L.sum() / ((m - 1) * (m - 2)) - 2. / (m - 2) * KL.sum()) / (m * (m - 3))
 #
 #    
-def hsic_approx(X, y, feature_kernel=sk.rbf_kernel, label_kernel = sk.rbf_kernel, gamma = 1./12):
+def hsic_approx(X, y, L, Lones, feature_kernel=sk.rbf_kernel, label_kernel = sk.rbf_kernel, gamma = 1./12):
     """Compute an approximation of the Hilbert-Schmidt Independence Criterion (HSIC1)"""
     K = feature_kernel(X, X, gamma) if gamma is not None else feature_kernel(X,X)
-    L = label_kernel(y, y)
+    # L = label_kernel(y, y)
     m = X.shape[0]
     
     for i in range(m):
         K[i, i] = 0
-        L[i, i] = 0
+        # L[i, i] = 0
 
     oneK = np.ones(m).dot(K)
-    Lone = L.dot(np.ones(m))
+    # Lones = L.dot(np.ones(m))
     trKL = np.multiply(K, L.T).sum()
     hsic = 1. / (m * (m - 3)) * (trKL + 1 / ((m - 1) * (m - 2)) *
-                                oneK.dot(np.ones(m) * np.ones(m).dot(Lone)) - 2 / (m - 2) * oneK.dot(Lone))
+                                oneK.dot(np.ones(m) * np.ones(m).dot(Lones)) - 2 / (m - 2) * oneK.dot(Lones))
     return hsic

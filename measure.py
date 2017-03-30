@@ -39,15 +39,17 @@ class Dependency_Measure(object):
             self.scorer = lambda x, y: copula_measure(
                 x, y, kernel=self.feature_kernel, gamma=self.gamma)
         elif self.measure == 'hsic':
-            self.scorer = lambda x, y: hsic_approx(
-                x, y, feature_kernel=self.feature_kernel, label_kernel=self.label_kernel, gamma=self.gamma)
+            self.scorer = lambda x, y, l, lones: hsic_approx(
+                x, y, l, lones, feature_kernel=self.feature_kernel, label_kernel=self.label_kernel, gamma=self.gamma)
         elif self.measure == 'mutual_information':
             self.scorer = lambda x, y: normalized_mutual_info_score(x.reshape((-1, )), y.reshape((-1, )))
 
-    def score(self, X, Y):
+    def score(self, X, Y, L, Lones):
         """
         Return the dependency score I(X,Y)
         """
         X_ = X[:, np.newaxis] if len(X.shape) == 1 else X
         Y_ = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
+        if self.measure == 'hsic':
+            return self.scorer(X_, Y_, L, Lones)
         return self.scorer(X_, Y_)
