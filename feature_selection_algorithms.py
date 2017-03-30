@@ -20,7 +20,7 @@ from tqdm import tqdm, trange
 from copula_dependence import approx_copula
 
 
-def incremental_selection(X, Y, k, measure):
+def incremental_selection(X, Y, k, measure, copula = None):
     """
     Returns all the subsets of features of length smaller than k selected by incremental search
     """
@@ -29,7 +29,10 @@ def incremental_selection(X, Y, k, measure):
     m = X.shape[1]
 
     X_ = np.c_[X, Y]
-    Z = approx_copula(X_) if measure.measure == 'copula' else X_
+    if measure.measure == 'copula':
+          approx_copula(X_) if copula is None else copula
+    else:
+          Z = X_
 
     for i in trange(k, leave=False):
         best_score = -1E3
@@ -60,7 +63,7 @@ def incremental_selection(X, Y, k, measure):
     return subsets
 
 
-def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True):
+def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True, copula = None):
     """
     The selection heuristic from Peng and al.
     - use incremental selection to find n sequential feature sets (n large)
@@ -70,7 +73,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True):
 
     print("Performing incremental selection\n")
     subsets = incremental_selection(
-        X, Y, k, measure=measure)
+        X, Y, k, measure=measure, copula = None)
     cv_scores = np.zeros((k, 2))
 
     print("Computing CV scores\n")
@@ -88,7 +91,7 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True):
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
-def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = True):
+def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = True, copula = None):
     """Implements Backward Elimination
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -107,7 +110,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     Y = approx_copula(y) if measure.measure == 'copula' else y
     
     if measure.measure == 'copula':
-          X = approx_copula(X) 
+          X = approx_copula(X) if copula is None else copula[:,:-1]
           
     
     while len(S) > 1:
@@ -135,7 +138,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     return (T + list(S))[-t:], scores.mean(), scores.std()
 
 
-def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = True):
+def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = True, copula = None):
     """Implements Forward Selection
         Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -155,7 +158,7 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
     Y = approx_copula(y) if measure.measure == 'copula' else y
     
     if measure.measure == 'copula':
-          X = approx_copula(X) 
+          X = approx_copula(X) if copula is None else copula[:,:-1] 
           
     while len(S) > 1:
         if len(T) > t:

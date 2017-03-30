@@ -15,6 +15,7 @@ from sklearn import ensemble
 from sklearn import linear_model
 
 from feature_selection_algorithms import *
+from copula_dependence import approx_copula
 from measure import Dependency_Measure
 
 
@@ -26,6 +27,8 @@ boston = load_boston()
 breast_cancer = load_breast_cancer()
 diabetes = load_diabetes()
 
+
+breast_copula = approx_copula(np.c_[breast_cancer.data, breast_cancer.target])
 
 HSIC = Dependency_Measure(measure='hsic', feature_kernel=sk.rbf_kernel,
                           label_kernel=sk.rbf_kernel, gamma=1. / 12)
@@ -66,11 +69,11 @@ for measure in ['hsic','copula']:
       
       for clf in classifiers:
             alg_accuracy_scores[measure]['backward'][clf] =  backward_selection(breast_cancer.data, breast_cancer.target, 6,
-            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False , copula = breast_copula)
             alg_accuracy_scores[measure]['forward'][clf] =  forward_selection(breast_cancer.data, breast_cancer.target, 6,
-            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False, copula = breast_copula)
             alg_accuracy_scores[measure]['heuristic'][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
-            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False)
+            classifier = clf, measure = Dependency_Measure(measure=measure), regression = False, copula = breast_copula)
                   
 
 
@@ -82,7 +85,7 @@ for measure in ['hsic','copula']:
             accuracy_scores[measure][kernel] = {}
             for clf in classifiers:
                   accuracy_scores[measure][kernel][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
-                  clf, measure = Dependency_Measure(measure=measure, feature_kernel = kernel), regression = False)
+                  clf, measure = Dependency_Measure(measure=measure, feature_kernel = kernel), regression = False, copula = breast_copula)
 
 #Compare mutual_information and hsic and copula with linear kernels  
 #using heuristic selection with a svm classifier and a gradient boosting classifier
@@ -92,7 +95,7 @@ for measure in ['hsic','copula']:
       Linear_accuracy_scores[measure] = {}
       for clf in classifiers:
             Linear_accuracy_scores[measure][clf] =  selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
-            clf, measure = Dependency_Measure(measure=measure, feature_kernel = sk.linear_kernel), regression = False)
+            clf, measure = Dependency_Measure(measure=measure, feature_kernel = sk.linear_kernel), regression = False, copula = breast_copula)
   
 print('Saving Classification Benchmark \n')                  
 
