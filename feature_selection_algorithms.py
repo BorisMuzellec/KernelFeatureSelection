@@ -20,7 +20,7 @@ from tqdm import tqdm, trange
 from copula_dependence import approx_copula
 
 
-def incremental_selection(X, Y, k, measure, copula = None):
+def incremental_selection(X, Y, k, measure, copula=None):
     """
     Returns all the subsets of features of length smaller than k selected by incremental search
     """
@@ -31,10 +31,10 @@ def incremental_selection(X, Y, k, measure, copula = None):
 
     X_ = np.c_[X, Y]
     if measure.measure == 'copula':
-          approx_copula(X_) if copula is None else copula
+        Z = approx_copula(X_) if copula is None else copula
     else:
-          Z = X_
-    
+        Z = X_
+
     if measure.measure == 'hsic':
         L = measure.label_kernel(Y, Y)
         for i in range(Y.shape[0]):
@@ -53,7 +53,8 @@ def incremental_selection(X, Y, k, measure, copula = None):
                 for s in S:
                     score += measure.score(Z[:, j], Z[:, s], L, Lones)
                     #print('dependency between %u and %u: %f' %(j,s,copula_measure(Z[:, (j, s)], kernel, gamma)))
-                score = measure.score(Z[:, j, ], Z[:, -1], L, Lones) - score / i
+                score = measure.score(
+                    Z[:, j, ], Z[:, -1], L, Lones) - score / i
                 #print('dependency between %u and label: %f' %(j, copula_measure(Z[:, (j, -1)], kernel, gamma)))
 
                 if score > best_score:
@@ -73,7 +74,7 @@ def incremental_selection(X, Y, k, measure, copula = None):
     return subsets
 
 
-def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True, copula = None):
+def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression=True, copula=None):
     """
     The selection heuristic from Peng and al.
     - use incremental selection to find n sequential feature sets (n large)
@@ -81,12 +82,12 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True, 
     - take the smallest set with smallest error
     """
 
-    print("Performing incremental selection\n")
+    print("Performing incremental selection")
     subsets = incremental_selection(
-        X, Y, k, measure=measure, copula = None)
+        X, Y, k, measure=measure, copula=None)
     cv_scores = np.zeros((k, 2))
 
-    print("Computing CV scores\n")
+    print("Computing CV scores")
     for i in trange(k, leave=False):
         scores = cross_val_score(
             classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
@@ -94,14 +95,14 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression = True, 
         cv_scores[i, :] = np.array([scores.mean(), scores.std()])
 
     # Select the smallest mean errors
-    #print(cv_scores)
+    # print(cv_scores)
     #smallest_best_set = np.argmin(cv_scores[:, 0] ** 2 + cv_scores[:, 1])
     smallest_best_set = np.argmax(cv_scores[:, 0])
 
     return subsets[smallest_best_set], cv_scores[smallest_best_set]
 
 
-def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = True, copula = None):
+def backward_selection(X, y, t, measure, classifier=None, cv=10, regression=True, copula=None):
     """Implements Backward Elimination
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -116,13 +117,13 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     """
     S = set(range(X.shape[1]))
     T = list()
-    
+
     Y = approx_copula(y) if measure.measure == 'copula' else y
     Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
-    
+
     if measure.measure == 'copula':
-          X = approx_copula(X) if copula is None else copula[:,:-1]
-    
+        X = approx_copula(X) if copula is None else copula[:, :-1]
+
     if measure.measure == 'hsic':
         L = measure.label_kernel(Y, Y)
         for i in range(Y.shape[0]):
@@ -131,7 +132,7 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
     else:
         L = None
         Lones = None
-    
+
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
         best_score_sum = -np.inf
@@ -147,17 +148,16 @@ def backward_selection(X, y, t, measure, classifier = None, cv=10, regression = 
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
-              
+
         scores = []
         if classifier is not None:
-              scores = cross_val_score(
-            classifier, X[:,(T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
-              
+            scores = cross_val_score(
+                classifier, X[:, (T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
 
     return (T + list(S))[-t:], scores.mean(), scores.std()
 
 
-def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = True, copula = None):
+def forward_selection(X, y, t, measure, classifier=None, cv=10, regression=True, copula=None):
     """Implements Forward Selection
         Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
 
@@ -169,17 +169,17 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
         Output:
             subset of features of size t
             if classifier not None: the cv score of the classifier on the chosen subset
-                  
+
     """
     S = set(range(X.shape[1]))
     T = list()
-    
+
     Y = approx_copula(y) if measure.measure == 'copula' else y
     Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
-    
+
     if measure.measure == 'copula':
-          X = approx_copula(X) if copula is None else copula[:,:-1] 
-          
+        X = approx_copula(X) if copula is None else copula[:, :-1]
+
     if measure.measure == 'hsic':
         L = measure.label_kernel(Y, Y)
         for i in range(Y.shape[0]):
@@ -206,13 +206,10 @@ def forward_selection(X, y, t, measure, classifier = None, cv=10, regression = T
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
-        
+
         scores = []
         if classifier is not None:
-              scores = cross_val_score(
-            classifier, X[:,(T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
-              
+            scores = cross_val_score(
+                classifier, X[:, (T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
 
     return (T + list(S))[:t], scores.mean(), scores.std()
-
-
