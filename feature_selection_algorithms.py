@@ -82,12 +82,12 @@ def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression=True, co
     - take the smallest set with smallest error
     """
 
-    print("Performing incremental selection")
+    # print("Performing incremental selection")
     subsets = incremental_selection(
         X, Y, k, measure=measure, copula=None)
     cv_scores = np.zeros((k, 2))
 
-    print("Computing CV scores")
+    # print("Computing CV scores")
     for i in trange(k, leave=False):
         scores = cross_val_score(
             classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
@@ -213,3 +213,5 @@ def forward_selection(X, y, t, measure, classifier=None, cv=10, regression=True,
                 classifier, X[:, (T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
 
     return (T + list(S))[:t], scores.mean(), scores.std()
+
+
