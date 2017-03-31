@@ -45,7 +45,7 @@ svm_params = {'C': 1.0, 'kernel': 'rbf', 'degree': 3, 'gamma': 'auto'}
 BoostingClassifier = ensemble.GradientBoostingClassifier(**boost_params)
 SVMClassifier = svm.SVC(**svm_params)
 
-classifiers = [SVMClassifier, BoostingClassifier]
+classifiers = [('svm', SVMClassifier), ('boosting', BoostingClassifier)]
 
 print('Classification Problem: breast_cancer Dataset')
 
@@ -64,16 +64,16 @@ for measure in ['hsic', 'copula']:
     alg_accuracy_scores[measure]['forward'] = {}
     alg_accuracy_scores[measure]['heuristic'] = {}
 
-    for clf in classifiers:
-        alg_accuracy_scores[measure]['backward'][clf] = backward_selection(
+    for name, clf in classifiers:
+        alg_accuracy_scores[measure]['backward'][name] = backward_selection(
                 breast_cancer.data, breast_cancer.target, 6,
                 classifier=clf, measure=Dependency_Measure(measure=measure),
                 regression=False, copula=breast_copula)
-        alg_accuracy_scores[measure]['forward'][clf] = forward_selection(
+        alg_accuracy_scores[measure]['forward'][name] = forward_selection(
                 breast_cancer.data, breast_cancer.target, 6,
                 classifier=clf, measure=Dependency_Measure(measure=measure),
                 regression=False, copula=breast_copula)
-        alg_accuracy_scores[measure]['heuristic'][clf] = selection_heuristic(
+        alg_accuracy_scores[measure]['heuristic'][name] = selection_heuristic(
                 breast_cancer.data, breast_cancer.target, 6,
                 classifier=clf, measure=Dependency_Measure(measure=measure),
                 regression=False, copula=breast_copula)
@@ -87,8 +87,8 @@ for measure in ['hsic', 'copula']:
     accuracy_scores[measure] = {}
     for kernel in kernels:
         accuracy_scores[measure][kernel] = {}
-        for clf in classifiers:
-            accuracy_scores[measure][kernel][clf] = selection_heuristic(
+        for name, clf in classifiers:
+            accuracy_scores[measure][kernel][name] = selection_heuristic(
                     breast_cancer.data, breast_cancer.target, 6,
                     clf, measure=Dependency_Measure(measure=measure, feature_kernel=kernel),
                     regression=False, copula=breast_copula)
@@ -100,8 +100,8 @@ print("\tMutual Information vs HSIC vs Copula (linear kernels, heuristic selecti
 Linear_accuracy_scores = {}
 for measure in ['hsic', 'copula']:
     Linear_accuracy_scores[measure] = {}
-    for clf in classifiers:
-        Linear_accuracy_scores[measure][clf] = selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
+    for name, clf in classifiers:
+        Linear_accuracy_scores[measure][name] = selection_heuristic(breast_cancer.data, breast_cancer.target, 6,
                                                                    clf, measure=Dependency_Measure(measure=measure, feature_kernel=sk.linear_kernel), regression=False, copula=breast_copula)
 
 print('Saving Classification Benchmark')
