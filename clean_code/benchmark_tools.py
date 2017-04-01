@@ -38,7 +38,7 @@ def compare_kernels(X, y, estimators, measure_name, copula=None):
     print("Measure '{}', kernel: 'linear'".format(measure_name))
     measure = DependencyMeasure(measure=measure_name, feature_kernel=sk.linear_kernel)
     kern_accuracy_scores['linear'] = algos.heuristic_selection(X, y, 6, measure, 
-            estimators, regresstion=False, copula=copula)
+            estimators, regression=False, copula=copula)
 
     return kern_accuracy_scores
 
