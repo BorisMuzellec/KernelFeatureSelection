@@ -25,7 +25,7 @@ for measure_name in ['hsic', 'copula']:
     svm_clf = svm.SVC(**svm_params)
     classifiers = [('gb', gb_clf), ('svm', svm_clf)]
     results_algs[measure_name] = bm.compare_algorithms(X, y, estimators=classifiers, 
-            measure_name=measure_name, copula=breast_copula)
+            measure_name=measure_name, copula=breast_copula, regression=False)
 
 results_kerns = {}
 for measure_name in ['hsic', 'copula', 'mutual_information']:
@@ -33,7 +33,7 @@ for measure_name in ['hsic', 'copula', 'mutual_information']:
     svm_clf = svm.SVC(**svm_params)
     classifiers = [('gb', gb_clf), ('svm', svm_clf)]
     results_kerns[measure_name] = bm.compare_kernels(X, y, estimators=classifiers, 
-            measure_name=measure_name, copula=breast_copula)
+            measure_name=measure_name, copula=breast_copula, regression=False)
 
 results_linear = {}
 for measure_name in ['hsic', 'copula', 'mutual_information']:
