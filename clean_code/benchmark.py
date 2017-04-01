@@ -44,9 +44,11 @@ for measure_name in ['hsic', 'copula', 'mutual_information']:
     results_linear[measure_name] = heuristic_selection(X, y, 6, measure, classifiers, cv=10, regression=False, copula=breast_copula)
 
 
+results = [('results_algs', results_algs), ('results_kerns', results_kerns), ('results_linear', results_linear)]
+
+
 with open('breast_cancer_benchmark', 'wb') as f:
-    pickle.dump(3, f)
-    pickle.dump(results_algs, f)
-    pickle.dump(results_kerns, f)
-    pickle.dump(results_linear, f)
+    pickle.dump(len(results), f)
+    for r in results:
+        pickle.dump(r, f)
 
