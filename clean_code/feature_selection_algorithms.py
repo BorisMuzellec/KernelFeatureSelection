@@ -103,9 +103,6 @@ def forward_selection(X, y, t, measure, estimators, cv, regression=True, copula=
         L_ones = None
 
     while len(S) > 1:
-        if len(T) > t:
-            T = T[:t]
-            break
         subset_size = int(math.ceil(0.1 * len(S)))
         best_score_sum = -np.inf
         best_subset = None
@@ -120,6 +117,8 @@ def forward_selection(X, y, t, measure, estimators, cv, regression=True, copula=
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
+
+    T = T[:t]
 
     cv_scores = {}
     
