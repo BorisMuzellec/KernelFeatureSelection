@@ -1,13 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Mar 21 14:30:41 2017
-
-@author: boris
-"""
-from __future__ import division
-
-
 import copy
 from itertools import combinations
 import math
@@ -17,121 +7,40 @@ from scipy.special import binom
 from sklearn.model_selection import cross_val_score
 from tqdm import tqdm, trange
 
-from copula_dependence import approx_copula
+from copula_dependency import approx_copula
 
 
-def incremental_selection(X, Y, k, measure, copula=None):
-    """
-    Returns all the subsets of features of length smaller than k selected by incremental search
-    """
-    S = []
-    subsets = []
-    m = X.shape[1]
-    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
-
-    X_ = np.c_[X, Y]
-    if measure.measure == 'copula':
-        Z = approx_copula(X_) if copula is None else copula
-    else:
-        Z = X_
-
-    if measure.measure == 'hsic':
-        L = measure.label_kernel(Y, Y)
-        for i in range(Y.shape[0]):
-            L[i, i] = 0
-        Lones = L.dot(np.ones(X.shape[0]))
-    else:
-        L = None
-        Lones = None
-
-    for i in trange(k, leave=False):
-        best_score = -1E3
-        best_feature = -1
-        if i > 0:
-            for j in tqdm(set(np.arange(m)) - set(S), leave=False):
-                score = 0
-                for s in S:
-                    score += measure.score(Z[:, j], Z[:, s], L, Lones)
-                    #print('dependency between %u and %u: %f' %(j,s,copula_measure(Z[:, (j, s)], kernel, gamma)))
-                score = measure.score(
-                    Z[:, j, ], Z[:, -1], L, Lones) - score / i
-                #print('dependency between %u and label: %f' %(j, copula_measure(Z[:, (j, -1)], kernel, gamma)))
-
-                if score > best_score:
-                    best_score = score
-                    best_feature = j
-        else:
-            for j in range(m):
-                score = measure.score(Z[:, j, ], Z[:, -1], L, Lones)
-                if score > best_score:
-                    best_score = score
-                    best_feature = j
-
-        # print('best_feature: %u , best_score: %f' % (best_feature, best_score))
-        S.append(best_feature)
-        subsets.append(copy.deepcopy(S))
-
-    return subsets
-
-
-def selection_heuristic(X, Y, k, classifier, measure, cv=10, regression=True, copula=None):
-    """
-    The selection heuristic from Peng and al.
-    - use incremental selection to find n sequential feature sets (n large)
-    - compare the feature sets usign cross validation to find a range k of small error (mean + variance)
-    - take the smallest set with smallest error
-    """
-
-    # print("Performing incremental selection")
-    subsets = incremental_selection(
-        X, Y, k, measure=measure, copula=None)
-    cv_scores = np.zeros((k, 2))
-
-    # print("Computing CV scores")
-    for i in trange(k, leave=False):
-        scores = cross_val_score(
-            classifier, X[:, subsets[i]], Y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
-        # cv_scores[i] = (epsilon * scores.mean() - 0.2 * scores.std(), epsilon * scores.mean() + 0.2 * scores.std())
-        cv_scores[i, :] = np.array([scores.mean(), scores.std()])
-
-    # Select the smallest mean errors
-    # print(cv_scores)
-    #smallest_best_set = np.argmin(cv_scores[:, 0] ** 2 + cv_scores[:, 1])
-    smallest_best_set = np.argmax(cv_scores[:, 0])
-
-    return subsets[smallest_best_set], cv_scores[smallest_best_set]
-
-
-def backward_selection(X, y, t, measure, classifier=None, cv=10, regression=True, copula=None):
-    """Implements Backward Elimination
+def backward_selection(X, y, t, measure, estimators, cv=10, regression=True, copula=None):
+    """Implement Backward Elimination algorithm for Feature Selection
         Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
-        Input:
-            X: dataset features
-            y: dataset labels
-            t: desired number of features
-            measure: dependency measure
-        Output:
-            subset of features of size t
+    :X: dataset features
+    :y: dataset labels
+    :t: desired number of features
+    :measure: dependency measure (instance of DependencyMeasure)
+    :estimators: list of estimators used to select the best subset (list of tuples (est_name, est))
+    :cv: number of folds for cross-validation
+    :regression: boolean, True if the task is a regression, False if it is a classification
+    :copula: copula distribution (optional)
+    :returns: dict whose keys are estimators names and values are a tuple (best subset, cv mean, cv std)
 
     """
     S = set(range(X.shape[1]))
     T = list()
 
-    Y = approx_copula(y) if measure.measure == 'copula' else y
-    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
+    Y = y[:, np.newaxis] if y.ndim == 1 else y
 
     if measure.measure == 'copula':
         X = approx_copula(X) if copula is None else copula[:, :-1]
+        Y = approx_copula(y)
 
     if measure.measure == 'hsic':
         L = measure.label_kernel(Y, Y)
-        for i in range(Y.shape[0]):
-            L[i, i] = 0
-        Lones = L.dot(np.ones(X.shape[0]))
+        np.fill_diagonal(L, 0)
+        L_ones = L.dot(np.ones(X.shape[0]))
     else:
         L = None
-        Lones = None
+        L_ones = None
 
     while len(S) > 1:
         subset_size = int(math.ceil(0.1 * len(S)))
@@ -142,56 +51,58 @@ def backward_selection(X, y, t, measure, classifier=None, cv=10, regression=True
             score_sum = 0.0
             for j in subset:
                 feats = np.array(list(S - set([j])))
-                score_sum += measure.score(X[:, feats], Y, L, Lones)
+                score_sum += measure.score(X[:, feats], Y, L, L_ones)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
 
-        scores = []
-        if classifier is not None:
-            scores = cross_val_score(
-                classifier, X[:, (T + list(S))[:-t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
+    T = (T + list(S))[-t:]
 
-    return (T + list(S))[-t:], scores.mean(), scores.std()
+    cv_scores = {}
+    
+    scoring = 'neg_mean_squared_error' if regression else 'accuracy'
+    for est_name, est in estimators:
+        scores = cross_val_score(est, X[:, T], y, cv=cv, scoring=scoring)
+        cv_scores[est_name] = (T, scores.mean(), scores.std())
+    
+    return cv_scores
 
 
-def forward_selection(X, y, t, measure, classifier=None, cv=10, regression=True, copula=None):
-    """Implements Forward Selection
-        Reference: "Feature Selection via Dependence Maximization", §4.2, Le sing, Smola, Gretton, Bedo, Borgwardt
+def forward_selection(X, y, t, measure, estimators, cv, regression=True, copula=None):
+    """Implement Forward Elimination algorithm for Feature Selection
+        Reference: "Feature Selection via Dependence Maximization", §4.1, Le Sing, Smola, Gretton, Bedo, Borgwardt
 
-        Input:
-            X: dataset features
-            y: dataset labels
-            t: desired number of output features
-            measure: dependency measure
-        Output:
-            subset of features of size t
-            if classifier not None: the cv score of the classifier on the chosen subset
+    :X: dataset features
+    :y: dataset labels
+    :t: desired number of features
+    :measure: dependency measure (instance of DependencyMeasure)
+    :estimators: list of estimators used to select the best subset (list of tuples (est_name, est))
+    :cv: number of folds for cross-validation
+    :regression: boolean, True if the task is a regression, False if it is a classification
+    :copula: copula distribution (optional)
+    :returns: dict whose keys are estimators names and values are a tuple (best subset, cv mean, cv std)
 
     """
     S = set(range(X.shape[1]))
     T = list()
 
-    Y = approx_copula(y) if measure.measure == 'copula' else y
-    Y = Y[:, np.newaxis] if len(Y.shape) == 1 else Y
+    Y = y[:, np.newaxis] if y.ndim == 1 else y
 
     if measure.measure == 'copula':
         X = approx_copula(X) if copula is None else copula[:, :-1]
-
+        Y = approx_copula(y)
+    
     if measure.measure == 'hsic':
         L = measure.label_kernel(Y, Y)
-        for i in range(Y.shape[0]):
-            L[i, i] = 0
-        Lones = L.dot(np.ones(X.shape[0]))
+        np.fill_diagonal(L, 0)
+        L_ones = L.dot(np.ones(X.shape[0]))
     else:
         L = None
-        Lones = None
+        L_ones = None
 
     while len(S) > 1:
-        if len(T) > t:
-            return T[:t]
         subset_size = int(math.ceil(0.1 * len(S)))
         best_score_sum = -np.inf
         best_subset = None
@@ -200,18 +111,107 @@ def forward_selection(X, y, t, measure, classifier=None, cv=10, regression=True,
             score_sum = 0.0
             for j in subset:
                 feats = np.array(T + [j])
-                score_sum += measure.score(X[:, feats], Y, L, Lones)
+                score_sum += measure.score(X[:, feats], Y, L, L_ones)
             if score_sum > best_score_sum:
                 best_score_sum = score_sum
                 best_subset = subset
         S = S - best_subset
         T = T + list(best_subset)
 
-        scores = []
-        if classifier is not None:
-            scores = cross_val_score(
-                classifier, X[:, (T + list(S))[:t]], y, cv=cv, scoring='neg_mean_squared_error' if regression else 'accuracy')
+    T = T[:t]
 
-    return (T + list(S))[:t], scores.mean(), scores.std()
+    cv_scores = {}
+    
+    scoring = 'neg_mean_squared_error' if regression else 'accuracy'
+    for est_name, est in estimators:
+        scores = cross_val_score(est, X[:, T], y, cv=cv, scoring=scoring)
+        cv_scores[est_name] = (T, scores.mean(), scores.std())
+    
+    return cv_scores
 
+
+def incremental_search(X, y, k, measure, copula=None):
+    """Compute all subsets of length less or equal to k, selected by incremental search.
+        Reference: "Feature Selection Based on Mutual Information: Criteria of Max-Dependency, Max-Relevance, and Min-Redundancy", §2.2, Peng et al.
+
+    :X: dataset features
+    :y: dataset labels
+    :k: maximum size of subsets
+    :measure: dependency measure (instance of DependencyMeasure)
+    :copula: copula distribution (optional)
+    :returns: list of subsets of sizes 1 to k
+
+    """
+    S = []
+    subsets = []
+    m = X.shape[1]
+    Y = y[:, np.newaxis] if y.ndim == 1 else y
+
+    X_ = np.c_[X, Y]
+
+    if measure.measure == 'copula':
+        Z = approx_copula(X_) if copula is None else copula
+    else:
+        Z = X_
+
+    if measure.measure == 'hsic':
+        L = measure.label_kernel(Y, Y)
+        np.fill_diagonal(L, 0)
+        L_ones = L.dot(np.ones(X.shape[0]))
+    else:
+        L = None
+        L_ones = None
+
+    for i in trange(k, leave=False):
+        best_score = -np.inf
+        best_feature = -1
+        if i == 0:
+            for j in range(m):
+                score = measure.score(Z[:, j], Z[:, -1], L, L_ones)
+                if score > best_score:
+                    best_score = score
+                    best_feature = j
+        else:
+            for j in (set(np.arange(m)) - set(S)):
+                score = 0.0
+                for s in S:
+                    score += measure.score(Z[:, j], Z[:, s], L, L_ones)
+                score = - score / i
+                score += measure.score(Z[:, j], Z[:, -1], L, L_ones)
+                if score > best_score:
+                    best_score = score
+                    best_feature = j
+
+        S.append(best_feature)
+        subsets.append(copy.deepcopy(S))
+
+    return subsets
+
+
+def heuristic_selection(X, y, t, measure, estimators, cv=10, regression=True, copula=None):
+    """Implement the selection heuristic from Peng and al.
+
+    :X: dataset features
+    :y: dataset labels
+    :t: desired number of features
+    :measure: dependency measure (instance of DependencyMeasure)
+    :estimators: list of estimators used to select the best subset (list of tuples (est_name, est))
+    :regression: boolean, True if the task is a regression, False if it is a classification
+    :copula: copula distribution (optional)
+    :returns: dict whose keys are estimators names and values are a tuple (best subset, cv mean, cv std)
+    """
+    subsets = incremental_search(X, y, t, measure=measure, copula=copula)
+    cv_scores = {}
+
+    scoring = 'neg_mean_squared_error' if regression else 'accuracy'
+    for est_name, est in estimators:
+        scores_tmp = np.zeros((t, 2))
+        for i in trange(t, leave=False):
+            scores = cross_val_score(est, X[:, subsets[i]], y, cv=cv, scoring=scoring)
+            scores_tmp[i, 0] = scores.mean()
+            scores_tmp[i, 1] = scores.std()
+        best_i = np.argmax(scores_tmp[:, 0])
+        cv_scores[est_name] = (subsets[best_i], scores_tmp[best_i, 0], scores_tmp[best_i, 1])
+
+    return cv_scores
 

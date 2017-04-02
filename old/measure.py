@@ -1,12 +1,20 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 27 17:34:16 2017
+
+@author: boris
+"""
+
 import numpy as np
 import sklearn.metrics.pairwise as sk
 from sklearn.metrics import normalized_mutual_info_score
 
-from copula_dependency import copula_measure
-from hsic_dependency import hsic_approx
+from copula_dependence import copula_measure
+from kernel_dependency import hsic_approx
 
 
-class DependencyMeasure(object):
+class Dependency_Measure(object):
     """
     A generic class for dependency measures
     """
@@ -26,12 +34,15 @@ class DependencyMeasure(object):
         self.label_kernel = label_kernel
         self.gamma = gamma if feature_kernel != sk.linear_kernel else None
               
+
         if self.measure == 'copula':
-            self.scorer = lambda x, y: copula_measure(x, y, kernel=self.feature_kernel, gamma=self.gamma)
+            self.scorer = lambda x, y: copula_measure(
+                x, y, kernel=self.feature_kernel, gamma=self.gamma)
         elif self.measure == 'hsic':
-            self.scorer = lambda x, y, l, l_one: hsic_approx(x, y, l, l_one, feature_kernel=self.feature_kernel, label_kernel=self.label_kernel, gamma=self.gamma)
+            self.scorer = lambda x, y, l, lones: hsic_approx(
+                x, y, l, lones, feature_kernel=self.feature_kernel, label_kernel=self.label_kernel, gamma=self.gamma)
         elif self.measure == 'mutual_information':
-            self.scorer = lambda x, y: normalized_mutual_info_score(np.ravel(x), np.ravel(y)) 
+            self.scorer = lambda x, y: normalized_mutual_info_score(x.reshape((-1, )), y.reshape((-1, )))
 
     def score(self, X, Y, L, Lones):
         """
@@ -42,4 +53,3 @@ class DependencyMeasure(object):
         if self.measure == 'hsic':
             return self.scorer(X_, Y_, L, Lones)
         return self.scorer(X_, Y_)
-
